@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WallStudio | Smart Paint Visualizer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root { --primary:#3f51d9; --ink:#161c3a; --bg:#f1f3f6; --border:#dde1ea; --muted:#6a7186; --soft:#e8ebfb; }
+* { box-sizing:border-box; }
+[hidden] { display:none !important; }
+body { margin:0; font-family:"DM Sans",Arial,sans-serif; background:var(--bg); color:var(--ink); line-height:1.5; }
+button,input,select { font:inherit; }
+button { cursor:pointer; }
+:focus-visible { outline:3px solid var(--primary); outline-offset:2px; }
+h1,h2,h3,.logo { font-family:"Bricolage Grotesque","DM Sans",sans-serif; letter-spacing:-.02em; }
+h1 { margin:0 0 8px; font-size:30px; font-weight:800; }
+h2 { margin:0 0 10px; font-size:20px; font-weight:600; }
+.subtitle { color:var(--muted); font-size:15px; max-width:64ch; }
+.hint { margin-top:10px; font-size:12.5px; color:var(--muted); }
+
+header { position:sticky; top:0; z-index:20; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; padding:14px 5%; background:var(--ink); color:#fff; }
+.logo { font-size:26px; font-weight:800; }
+header p { margin:2px 0 0; font-size:12px; color:#aab1d6; }
+.userbox { display:flex; align-items:center; gap:12px; font-size:14px; }
+
+.app { display:grid; grid-template-columns:230px minmax(0,1fr); min-height:calc(100vh - 66px); }
+.app.noauth { grid-template-columns:1fr; }
+main { padding:30px; min-width:0; }
+aside { position:sticky; top:66px; align-self:start; height:calc(100vh - 66px); padding:22px 14px; background:#fff; border-right:1px solid var(--border); }
+.nav-heading { margin:6px 12px 14px; font-size:11px; letter-spacing:.08em; color:var(--muted); }
+.nav-btn { display:block; width:100%; margin-bottom:4px; padding:12px 14px; border:0; border-radius:10px; background:transparent; color:#454c63; text-align:left; font-weight:500; }
+.nav-btn:hover { background:var(--soft); }
+.nav-btn.active { background:var(--ink); color:#fff; }
+
+.page { display:none; }
+.page.active { display:block; animation:fadeIn .3s ease; }
+@keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+.panel { margin:20px 0; padding:22px; background:#fff; border:1px solid var(--border); border-radius:18px; box-shadow:0 10px 30px -18px rgba(22,28,58,.35); }
+
+.btn { padding:11px 17px; border:1.5px solid var(--border); border-radius:999px; background:#fff; color:var(--ink); font-size:13px; font-weight:700; transition:.15s; text-decoration:none; display:inline-block; }
+.btn:hover { border-color:var(--primary); color:var(--primary); }
+.btn.primary { background:var(--primary); border-color:var(--primary); color:#fff; }
+.btn.primary:hover { background:#2f3fbd; color:#fff; }
+.btn.accent { background:#f4b183; border-color:#f4b183; color:var(--ink); }
+.btn.sm { padding:6px 11px; font-size:12px; }
+.actions { display:flex; flex-wrap:wrap; gap:9px; margin-top:14px; }
+
+label { display:block; margin:16px 0 7px; font-size:13px; font-weight:700; }
+input,select { width:100%; padding:10px 12px; border:1.5px solid var(--border); border-radius:10px; background:#fff; }
+input[type=color] { height:44px; padding:3px; }
+input[type=range] { padding:0; accent-color:var(--primary); }
+input[type=checkbox] { width:auto; }
+.check { display:flex; align-items:center; gap:8px; font-weight:500; }
+.notice { margin-top:14px; padding:13px 15px; border-radius:12px; background:var(--soft); color:#2f3a8f; font-size:12.5px; }
+.notice.err { background:#fde8e8; color:#9b1c1c; }
+
+.auth-card { max-width:430px; margin:30px auto; }
+.stats { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-top:20px; }
+.stat { padding:18px; background:#fff; border:1px solid var(--border); border-radius:16px; font-size:13px; color:var(--muted); }
+.stat strong { display:block; font-family:"Bricolage Grotesque",sans-serif; font-size:34px; color:var(--primary); }
+.steps { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px; margin-top:14px; counter-reset:step; }
+.steps div { counter-increment:step; padding:14px; border-radius:14px; background:var(--bg); font-size:13px; color:#454c63; }
+.steps div::before { content:counter(step); display:grid; place-items:center; width:28px; height:28px; margin-bottom:8px; border-radius:50%; background:var(--primary); color:#fff; font-weight:700; }
+
+.drop { display:grid; gap:6px; place-items:center; padding:40px 20px; border:2px dashed var(--border); border-radius:16px; background:var(--bg); text-align:center; cursor:pointer; margin:0; }
+.drop:hover,.drop.over { border-color:var(--primary); background:var(--soft); }
+.drop span { color:var(--muted); font-size:13px; font-weight:400; }
+.room-gallery { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:16px; margin-top:12px; }
+.room-card { padding:0; overflow:hidden; border:1.5px solid var(--border); border-radius:16px; background:#fff; text-align:left; transition:.2s; }
+.room-card:hover { border-color:var(--primary); transform:translateY(-4px); }
+.room-card img { display:block; width:100%; height:130px; object-fit:cover; background:#e9e9e0; }
+.room-card strong { display:block; padding:12px 14px 2px; font-size:14px; }
+.room-card small { display:block; padding:0 14px 13px; color:var(--muted); }
+
+.studio { display:grid; grid-template-columns:minmax(0,1.5fr) minmax(280px,.9fr); gap:18px; align-items:start; }
+.canvas-wrap { padding:8px; border-radius:16px; background:var(--ink); }
+canvas { display:block; width:100%; height:auto; border-radius:10px; background:#fff; cursor:crosshair; touch-action:none; }
+.tool-row { display:flex; gap:6px; }
+.tool { flex:1; padding:10px; border:1.5px solid var(--border); border-radius:10px; background:#fff; font-size:13px; font-weight:700; }
+.tool.active { background:var(--ink); border-color:var(--ink); color:#fff; }
+.chips { display:flex; flex-wrap:wrap; gap:8px; font-size:13px; color:var(--muted); }
+.gallery-tabs { display:flex; flex-wrap:wrap; gap:8px; }
+.gallery-tab { padding:8px 14px; border:1.5px solid var(--border); border-radius:999px; background:#fff; font-size:12.5px; font-weight:500; }
+.gallery-tab.active { background:var(--ink); border-color:var(--ink); color:#fff; }
+.slots { display:flex; gap:10px; margin-top:12px; }
+.slot { flex:1; display:flex; align-items:center; gap:8px; padding:8px; border:2px solid var(--border); border-radius:12px; background:#fff; font-size:12px; font-weight:700; }
+.slot i { width:28px; height:28px; border-radius:8px; border:1px solid rgba(0,0,0,.15); }
+.slot.on { border-color:var(--primary); }
+.palette { display:grid; grid-template-columns:repeat(4,1fr); gap:9px; margin:12px 0; max-height:330px; overflow-y:auto; padding:2px; }
+.color-option { min-width:0; padding:4px; border:2px solid transparent; border-radius:9px; background:#fff; text-align:center; }
+.color-option:hover { background:var(--bg); }
+.color-option.selected { border-color:var(--primary); background:var(--soft); }
+.swatch { display:block; width:100%; height:34px; border-radius:6px; border:1px solid rgba(0,0,0,.1); }
+.color-name { display:block; margin-top:5px; font-size:10px; line-height:1.3; overflow-wrap:anywhere; }
+.color-hex { display:block; margin-top:2px; font-size:9px; color:var(--muted); }
+.color-inputs { display:grid; grid-template-columns:55px 1fr; gap:10px; }
+
+.design-list { display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:14px; }
+.design-card { padding:14px; border:1.5px solid var(--border); border-radius:16px; background:#fff; }
+.design-card img { display:block; width:100%; margin-bottom:10px; border-radius:10px; }
+.design-card p { margin:4px 0 8px; font-size:12px; color:var(--muted); }
+.dot { display:inline-block; width:18px; height:18px; margin-right:3px; border-radius:50%; border:1px solid rgba(0,0,0,.15); vertical-align:middle; }
+
+.table-wrap { overflow-x:auto; margin-top:14px; }
+table { width:100%; border-collapse:collapse; font-size:13px; }
+th,td { padding:9px 10px; border-bottom:1px solid var(--border); text-align:left; }
+th { color:var(--muted); }
+.form-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:12px; }
+.result { margin-top:15px; padding:18px; border-radius:14px; background:var(--soft); line-height:1.8; }
+footer { padding:24px; text-align:center; font-size:12px; color:var(--muted); }
+#toast { position:fixed; left:50%; bottom:24px; transform:translateX(-50%); padding:12px 18px; border-radius:999px; background:var(--ink); color:#fff; font-size:13px; opacity:0; pointer-events:none; transition:.25s; z-index:50; }
+#toast.show { opacity:1; }
+
+@media (max-width:850px) {
+  .app { grid-template-columns:1fr; }
+  aside { position:static; height:auto; display:flex; gap:5px; overflow-x:auto; padding:10px; border-right:0; border-bottom:1px solid var(--border); }
+  .nav-heading { display:none; }
+  .nav-btn { width:auto; margin:0; white-space:nowrap; }
+  main { padding:16px; }
+  .studio { grid-template-columns:1fr; }
+}
+@media (max-width:480px) { .stats,.form-grid { grid-template-columns:1fr; } .panel { padding:15px; } h1 { font-size:25px; } }
+@media (prefers-reduced-motion:reduce) { * { animation:none !important; transition:none !important; } }
+</style>
+</head>
+<body>
+
+<header>
+  <div><div class="logo" id="logo">WallStudio</div><p>Smart Paint Visualizer</p></div>
+  <div class="userbox" id="userBox" hidden><span id="userName"></span><button class="btn accent sm" id="logoutBtn">Log out</button></div>
+</header>
+
+<div class="app noauth" id="app">
+<aside id="nav" hidden>
+  <div class="nav-heading">WORKSPACE</div>
+  <button class="nav-btn" data-page="dashboard">Dashboard</button>
+  <button class="nav-btn" data-page="upload">1. Upload Image</button>
+  <button class="nav-btn" data-page="select">2. Select Walls</button>
+  <button class="nav-btn" data-page="preview">3. Colour Preview</button>
+  <button class="nav-btn" data-page="saved">Saved Designs</button>
+  <button class="nav-btn" data-page="calculator">Paint Calculator</button>
+  <button class="nav-btn" data-page="admin" id="adminNav" hidden>Admin Panel</button>
+</aside>
+
+<main>
+
+<!-- Login / Register -->
+<section class="page" id="login">
+  <div class="panel auth-card">
+    <h1 id="authTitle">Welcome back</h1>
+    <p class="subtitle" id="authSub">Log in to start painting your rooms.</p>
+    <div id="nameRow" hidden><label for="regName">Full name</label><input id="regName" autocomplete="name"></div>
+    <label for="authEmail">Email</label><input id="authEmail" type="email" autocomplete="email">
+    <label for="authPass">Password</label><input id="authPass" type="password" autocomplete="current-password">
+    <div class="notice err" id="authMsg" hidden></div>
+    <div class="actions"><button class="btn primary" id="authSubmit">Log in</button><button class="btn" id="authToggle">Create an account</button></div>
+    <p class="hint">Demo admin account: admin@wallstudio.com / admin123</p>
+  </div>
+</section>
+
+<!-- Dashboard -->
+<section class="page" id="dashboard">
+  <h1 id="greeting">Welcome</h1>
+  <p class="subtitle">See the wall before you buy the paint. Upload a room, select the walls, and try colours and designs.</p>
+  <div class="actions"><button class="btn primary" data-go="upload">Start a new design</button><button class="btn" data-go="saved">My saved designs</button></div>
+  <div class="stats">
+    <div class="stat">Sample rooms<strong id="roomCount">0</strong></div>
+    <div class="stat">Paint colours<strong id="colorCount">0</strong></div>
+    <div class="stat">My saved designs<strong id="savedCount">0</strong></div>
+  </div>
+  <div class="panel"><h2>How it works</h2><div class="steps">
+    <div>Upload a JPG or PNG photo of your room.</div>
+    <div>Outline each wall with the polygon tool or paint it with the brush.</div>
+    <div>Pick solid or dual-tone colours, a design and the opacity.</div>
+    <div>Compare before and after, and keep several trials.</div>
+    <div>Save the design or download it as a PNG.</div>
+  </div></div>
+</section>
+
+<!-- Upload -->
+<section class="page" id="upload">
+  <h1>Upload Image</h1>
+  <p class="subtitle">Upload a photo of your room, or start from a sample room.</p>
+  <div class="panel">
+    <label class="drop" id="drop" for="photoUpload"><strong>Drop a photo here or click to browse</strong><span>JPG or PNG, up to <b id="maxMB">5</b> MB</span></label>
+    <input type="file" id="photoUpload" accept="image/jpeg,image/png" hidden>
+  </div>
+  <div class="panel"><h2>Sample rooms</h2><div class="room-gallery" id="roomGallery"></div>
+  <p class="hint">Photo samples need an internet connection. If one fails to load, an illustrated room is used instead.</p></div>
+</section>
+
+<!-- Wall selection -->
+<section class="page" id="select">
+  <h1>Select Walls</h1>
+  <p class="subtitle">Outline a wall with the polygon tool, or paint over it with the brush. Use the eraser to fix the edges.</p>
+  <div class="studio">
+    <div class="panel"><div class="canvas-wrap" id="slotSelect"></div><p class="hint" id="selHint"></p></div>
+    <div class="panel">
+      <h2>Selection tools</h2>
+      <div class="tool-row">
+        <button class="tool active" data-tool="polygon">Polygon</button>
+        <button class="tool" data-tool="brush">Brush</button>
+        <button class="tool" data-tool="eraser">Eraser</button>
+      </div>
+      <label for="brushSize">Brush size: <span id="brushVal">30</span> px</label>
+      <input type="range" id="brushSize" min="6" max="90" value="30">
+      <div class="actions"><button class="btn primary" id="finishPoly">Finish polygon</button><button class="btn" id="undoPoint">Undo point</button></div>
+      <label>Walls</label><div class="chips" id="wallChipsSelect"></div>
+      <div class="actions"><button class="btn" id="newWall">New wall</button><button class="btn" id="clearWall">Clear wall</button><button class="btn" id="deleteWall">Delete wall</button></div>
+      <div class="actions"><button class="btn primary" data-go="preview">Next: choose colours</button></div>
+    </div>
+  </div>
+</section>
+
+<!-- Colour preview -->
+<section class="page" id="preview">
+  <h1>Colour Preview</h1>
+  <p class="subtitle">Choose colours and designs for each wall, then compare with the original.</p>
+  <div class="studio">
+    <div class="panel">
+      <div class="canvas-wrap" id="slotPreview"></div>
+      <div class="actions">
+        <button class="btn" id="compareBtn">Show original</button>
+        <button class="btn" id="trialBtn">Save as trial</button>
+        <button class="btn primary" id="saveBtn">Save design</button>
+        <button class="btn" id="exportBtn">Download PNG</button>
+      </div>
+      <label>Design trials for this photo</label><div class="chips" id="trialChips"></div>
+    </div>
+    <div class="panel">
+      <h2>Paint Studio</h2>
+      <label>Wall</label><div class="chips" id="wallChipsPreview"></div>
+      <label>Finish</label>
+      <div class="tool-row"><button class="tool active" data-mode="solid">Solid</button><button class="tool" data-mode="dual">Dual-tone</button></div>
+      <div class="slots">
+        <button class="slot on" id="slot1"><i></i>Colour 1</button>
+        <button class="slot" id="slot2" hidden><i></i>Colour 2</button>
+      </div>
+      <div id="splitRow" hidden><label for="split">Split position: <span id="splitVal">50%</span></label><input type="range" id="split" min="10" max="90" value="50"></div>
+      <label for="patternSel">Design</label><select id="patternSel"></select>
+      <label for="opacity">Opacity: <span id="opacityVal">55%</span></label><input type="range" id="opacity" min="10" max="90" value="55">
+      <label class="check"><input type="checkbox" id="blend"> Keep wall shadows (more realistic)</label>
+      <label>Colour families</label><div class="gallery-tabs" id="colorCats"></div>
+      <label id="paletteHeading"></label><div class="palette" id="palette"></div>
+      <label for="customColor">Custom colour</label>
+      <div class="color-inputs"><input type="color" id="customColor" value="#A8BCA5"><input type="text" id="hexColor" value="#A8BCA5" maxlength="7" aria-label="Hex colour"></div>
+    </div>
+  </div>
+</section>
+
+<!-- Saved designs -->
+<section class="page" id="saved">
+  <h1>Saved Designs</h1>
+  <p class="subtitle">Your saved designs live in this browser. Download any of them as an image.</p>
+  <div class="panel"><div class="design-list" id="designList"></div></div>
+</section>
+
+<!-- Calculator -->
+<section class="page" id="calculator">
+  <h1>Paint Calculator</h1>
+  <p class="subtitle">Estimate the paint you need for one wall.</p>
+  <div class="panel">
+    <div class="form-grid">
+      <div><label for="wallWidth">Wall width (m)</label><input type="number" id="wallWidth" min="0.1" step="0.1" value="4"></div>
+      <div><label for="wallHeight">Wall height (m)</label><input type="number" id="wallHeight" min="0.1" step="0.1" value="3"></div>
+      <div><label for="coats">Number of coats</label><select id="coats"><option value="1">1 coat</option><option value="2" selected>2 coats</option><option value="3">3 coats</option></select></div>
+      <div><label for="coverage">Coverage per litre (m²)</label><input type="number" id="coverage" min="1" value="10"></div>
+      <div><label for="paintPrice">Price per litre (₹)</label><input type="number" id="paintPrice" min="0" value="350"></div>
+      <div><label for="deduction">Doors and windows (m²)</label><input type="number" id="deduction" min="0" value="2"></div>
+    </div>
+    <div class="actions"><button class="btn primary" id="calculateButton">Calculate paint</button></div>
+    <div class="result" id="calculatorResult" aria-live="polite"></div>
+    <p class="hint">Estimate only. Real usage depends on the surface and the paint.</p>
+  </div>
+</section>
+
+<!-- Admin -->
+<section class="page" id="admin">
+  <h1>Admin Panel</h1>
+  <p class="subtitle">Manage colours, designs, users and system settings.</p>
+  <div class="gallery-tabs" id="adminTabs">
+    <button class="gallery-tab active" data-tab="colours">Colours</button>
+    <button class="gallery-tab" data-tab="designs">Designs</button>
+    <button class="gallery-tab" data-tab="users">Users and activity</button>
+    <button class="gallery-tab" data-tab="saved">All saved designs</button>
+    <button class="gallery-tab" data-tab="settings">Settings</button>
+  </div>
+  <div class="panel" id="adminBody"></div>
+</section>
+
+<footer>WallStudio · Smart Paint Visualizer</footer>
+</main>
+</div>
+<div id="toast" role="status"></div>
+
+<script>
+"use strict";
+/* ===========================================================
+   WallStudio - front-end demo. Everything is kept in this
+   browser's localStorage (users, colours, designs, settings).
+   =========================================================== */
+
+const $ = id => document.getElementById(id);
+const on = (id, ev, fn) => $(id).addEventListener(ev, fn);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+const fmt = t => new Date(t).toLocaleString();
+const W = 900, H = 600;
+
+const canvas = document.createElement("canvas");
+canvas.id = "paintCanvas"; canvas.width = W; canvas.height = H;
+$("slotSelect").appendChild(canvas);
+const ctx = canvas.getContext("2d");
+const layer = document.createElement("canvas"); layer.width = W; layer.height = H;
+const lctx = layer.getContext("2d");
+
+/* ---------- Storage helper ---------- */
+const store = {
+  get(key, fallback) { try { const v = JSON.parse(localStorage.getItem(key)); return v ?? fallback; } catch (e) { return fallback; } },
+  set(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); return true; } catch (e) { return false; } }
+};
+
+/* ---------- Default data (admins can change all of it) ---------- */
+function parseColors(text) {
+  return text.trim().split("\n").flatMap(line => {
+    const [category, rest] = line.split(":");
+    return rest.split(",").map(item => {
+      const parts = item.trim().split(" ");
+      const hex = "#" + parts.pop();
+      return { name: parts.join(" "), hex, category: category.trim() };
+    });
+  });
+}
+const DEFAULT_COLORS = parseColors(`Neutrals: Warm Beige E8DCC8, Ivory F3EBDD, Cream FFF1D0, Soft White F8F7F2, Greige C9C0B1, Sandstone D6BEA1, Mushroom B9A7A0, Taupe A18B79, Charcoal 454A48, Soft Grey DDE3E8
+Greens: Sage Green A8BCA5, Mint C7E4D0, Olive 89945B, Forest Green 355E45, Eucalyptus 7D9A91
+Blues: Sky Blue A8C5D8, Powder Blue C9DDEB, Ocean Blue 4D8297, Navy Blue 354B68, Dusty Blue 8DA9C4
+Pinks: Blush Pink F2C6D2, Rose Pink D9899B, Dusty Rose C58F91, Coral Pink F08080, Soft Peach F6D0B1
+Purples: Lavender D9C3E8, Lilac C8B6E2, Mauve AD8CA1, Plum 79516F, Deep Purple 655080
+Earthy: Terracotta C98168, Clay B86F50, Rust A34F36, Cinnamon AA6748, Mocha 795548
+Yellows: Butter Yellow F4E3A1, Mustard D5B56D, Golden Sand D4AF37, Pale Lemon F8F3B0, Honey DFAF52
+Warm: Peach F6BFA8, Apricot F2A77E, Burnt Orange C65D32, Brick Red A94442, Warm Coral E98973
+Teals: Pale Teal B8D8D5, Turquoise 52B7B5, Deep Teal 287C78, Seafoam A8D5C2, Petrol Blue 386D75`);
+
+const DEFAULT_PATTERNS = [
+  { id: "p-sv", name: "Vertical stripes", kind: "stripes-v", size: 24 },
+  { id: "p-sh", name: "Horizontal stripes", kind: "stripes-h", size: 24 },
+  { id: "p-dt", name: "Polka dots", kind: "dots", size: 30 },
+  { id: "p-ck", name: "Checks", kind: "checks", size: 40 }
+];
+const DEFAULT_CONFIG = { appName: "WallStudio", defaultOpacity: 55, maxUploadMB: 5, allowRegistration: true };
+
+/* ---------- App state ---------- */
+let users = store.get("ws-users", []);
+let colors = store.get("ws-colors", null); if (!Array.isArray(colors) || !colors.length) colors = DEFAULT_COLORS.map(c => ({ ...c }));
+let patterns = store.get("ws-patterns", null); if (!Array.isArray(patterns)) patterns = DEFAULT_PATTERNS.map(p => ({ ...p }));
+let designs = store.get("ws-designs", []);
+let activity = store.get("ws-activity", []);
+let config = { ...DEFAULT_CONFIG, ...store.get("ws-config", {}) };
+
+let user = null, page = "login", authMode = "login";
+let image = null, imageName = "";
+let walls = [], activeWall = -1, poly = [], trials = [];
+let tool = "polygon", brushSize = 30, showOriginal = false;
+let target = "c1", catFilter = "All", adminTab = "colours";
+let editing = { color: null, pattern: null };
+let drawing = false, lastPoint = null, toastTimer;
+
+/* ---------- Small helpers ---------- */
+function toast(message) {
+  const t = $("toast"); t.textContent = message; t.classList.add("show");
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 2600);
+}
+function log(action) {
+  activity.push({ t: Date.now(), user: user ? user.email : "guest", action });
+  activity = activity.slice(-200); store.set("ws-activity", activity);
+}
+async function hash(password, salt) {
+  const text = salt + password;
+  if (window.crypto && crypto.subtle) {
+    try {
+      const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+      return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, "0")).join("");
+    } catch (e) { /* fall through to the simple hash */ }
+  }
+  let h = 5381; for (const ch of text) h = (h * 33) ^ ch.charCodeAt(0);
+  return "x" + (h >>> 0).toString(16);
+}
+const categories = () => ["All", ...new Set(colors.map(c => c.category))];
+
+/* ===========================================================
+   Login and registration
+   =========================================================== */
+function setAuthMode(mode) {
+  authMode = mode; const reg = mode === "register";
+  $("nameRow").hidden = !reg; $("authMsg").hidden = true;
+  $("authTitle").textContent = reg ? "Create your account" : "Welcome back";
+  $("authSub").textContent = reg ? "Register to save and manage your designs." : "Log in to start painting your rooms.";
+  $("authSubmit").textContent = reg ? "Register" : "Log in";
+  $("authToggle").textContent = reg ? "I already have an account" : "Create an account";
+}
+
+async function submitAuth() {
+  const email = $("authEmail").value.trim().toLowerCase(), pass = $("authPass").value;
+  const fail = text => { $("authMsg").textContent = text; $("authMsg").hidden = false; };
+  if (!/^\S+@\S+\.\S+$/.test(email)) return fail("Enter a valid email address.");
+
+  if (authMode === "register") {
+    const name = $("regName").value.trim();
+    if (!config.allowRegistration) return fail("Registration is closed. Ask an admin for an account.");
+    if (!name) return fail("Enter your name.");
+    if (pass.length < 6) return fail("Use a password with at least 6 characters.");
+    if (users.some(u => u.email === email)) return fail("An account with this email already exists.");
+    user = { id: Date.now(), name, email, role: "user", hash: await hash(pass, email), created: Date.now(), lastLogin: Date.now() };
+    users.push(user); store.set("ws-users", users); log("Registered");
+  } else {
+    const found = users.find(u => u.email === email);
+    if (!found || found.hash !== await hash(pass, email)) return fail("Email or password is incorrect.");
+    found.lastLogin = Date.now(); store.set("ws-users", users); user = found; log("Logged in");
+  }
+  enterApp();
+}
+
+function enterApp() {
+  store.set("ws-session", user.email);
+  $("authPass").value = ""; $("authMsg").hidden = true;
+  $("nav").hidden = false; $("userBox").hidden = false; $("app").classList.remove("noauth");
+  $("adminNav").hidden = user.role !== "admin";
+  $("userName").textContent = user.name + (user.role === "admin" ? " (admin)" : "");
+  showPage("dashboard");
+}
+
+function logout() {
+  log("Logged out"); user = null; localStorage.removeItem("ws-session");
+  image = null; resetProject();
+  $("nav").hidden = true; $("userBox").hidden = true; $("app").classList.add("noauth");
+  showPage("login");
+}
+
+/* ===========================================================
+   Page navigation
+   =========================================================== */
+function showPage(id) {
+  if (!user) id = "login"; else if (id === "login") id = "dashboard";
+  if (id === "admin" && (!user || user.role !== "admin")) id = "dashboard";
+  if ((id === "select" || id === "preview") && !image) { toast("Upload or choose a room photo first."); id = "upload"; }
+  if (id === "preview" && !walls.some(w => w.bb)) { toast("Select at least one wall first."); id = "select"; }
+
+  page = id;
+  document.querySelectorAll(".page").forEach(p => p.classList.toggle("active", p.id === id));
+  document.querySelectorAll(".nav-btn").forEach(b => b.classList.toggle("active", b.dataset.page === id));
+
+  if (id === "select") $("slotSelect").appendChild(canvas);
+  if (id === "preview") {
+    $("slotPreview").appendChild(canvas);
+    if (!walls[activeWall] || !walls[activeWall].bb) activeWall = walls.findIndex(w => w.bb);
+    syncControls(); renderTrials();
+  }
+  if (id === "dashboard") renderDashboard();
+  if (id === "saved") renderSaved();
+  if (id === "admin") renderAdmin();
+  renderWallChips(); updateHint(); render();
+  window.scrollTo({ top: 0 });
+}
+
+function renderDashboard() {
+  $("greeting").textContent = "Hi, " + user.name.split(" ")[0];
+  $("roomCount").textContent = sampleRooms.length;
+  $("colorCount").textContent = colors.length;
+  $("savedCount").textContent = designs.filter(d => d.owner === user.email).length;
+}
+
+/* ===========================================================
+   Rooms: samples and uploads
+   =========================================================== */
+function roomSVG(wallColor, name, kind) {
+  const furniture = kind === "bedroom"
+    ? '<rect x="240" y="355" width="420" height="125" rx="15" fill="#e8dfd3"/><rect x="265" y="325" width="370" height="75" rx="12" fill="#faf5ed"/>'
+    : kind === "kitchen"
+      ? '<rect x="130" y="325" width="640" height="145" fill="#f5f1e8"/><rect x="130" y="305" width="640" height="20" fill="#8e9d8b"/>'
+      : '<rect x="230" y="315" width="445" height="95" rx="25" fill="#f3e7d6"/><rect x="250" y="335" width="405" height="145" rx="22" fill="#e7d6c0"/>';
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="900" height="600" viewBox="0 0 900 600"><rect width="900" height="600" fill="#e9eae2"/><rect width="900" height="455" fill="${wallColor}"/><rect y="455" width="900" height="145" fill="#b69a7c"/><rect x="70" y="65" width="220" height="220" fill="#b7d4de" stroke="#fff" stroke-width="12"/>${furniture}<text x="450" y="575" font-size="18" text-anchor="middle" fill="#765d46" font-family="Arial">${esc(name)}</text></svg>`;
+  return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+}
+const unsplash = id => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=900&q=85`;
+const sampleRooms = [
+  { name: "Bright Living Room", type: "Photo", kind: "living", src: unsplash("photo-1600210492486-724fe5c67fb0") },
+  { name: "Calm Bedroom", type: "Photo", kind: "bedroom", src: unsplash("photo-1616594039964-ae9021a400a0") },
+  { name: "Modern Kitchen", type: "Photo", kind: "kitchen", src: unsplash("photo-1600585154340-be6161a56a0c") },
+  { name: "Illustrated Living Room", type: "Illustration", kind: "living", color: "#A8BCA5" },
+  { name: "Illustrated Bedroom", type: "Illustration", kind: "bedroom", color: "#D9C3E8" },
+  { name: "Illustrated Kitchen", type: "Illustration", kind: "kitchen", color: "#E8DCC8" }
+];
+const fallbackFor = room => roomSVG(room.color || "#E8DCC8", room.name, room.kind);
+
+function renderGallery() {
+  const box = $("roomGallery"); box.replaceChildren();
+  sampleRooms.forEach(room => {
+    const card = document.createElement("button");
+    card.type = "button"; card.className = "room-card";
+    const img = document.createElement("img");
+    img.src = room.src || fallbackFor(room); img.alt = room.name; img.loading = "lazy";
+    img.onerror = () => { img.onerror = null; img.src = fallbackFor(room); };
+    const title = document.createElement("strong"); title.textContent = room.name;
+    const tag = document.createElement("small"); tag.textContent = room.type;
+    card.append(img, title, tag);
+    card.addEventListener("click", () => loadImage(room.src || fallbackFor(room), room.name, { cors: !!room.src, fallback: fallbackFor(room) }));
+    box.appendChild(card);
+  });
+}
+
+function loadImage(src, name, opts = {}) {
+  const img = new Image();
+  if (opts.cors) img.crossOrigin = "anonymous";   // needed so the canvas can be exported
+  img.onload = () => { image = img; imageName = name; resetProject(); log("Loaded room image: " + name); showPage("select"); };
+  img.onerror = () => {
+    if (opts.fallback && src !== opts.fallback) loadImage(opts.fallback, name, {});
+    else toast("This image could not be loaded.");
+  };
+  img.src = src;
+}
+
+function handleFile(file) {
+  if (!file) return;
+  if (!["image/jpeg", "image/png"].includes(file.type)) return toast("Please choose a JPG or PNG image.");
+  if (file.size > config.maxUploadMB * 1048576) return toast(`Image is larger than ${config.maxUploadMB} MB.`);
+  const reader = new FileReader();
+  reader.onload = () => loadImage(reader.result, file.name);
+  reader.onerror = () => toast("Could not read this file.");
+  reader.readAsDataURL(file);
+}
+
+function resetProject() { walls = []; activeWall = -1; poly = []; trials = []; showOriginal = false; $("compareBtn").textContent = "Show original"; }
+
+/* ===========================================================
+   Walls: each wall is a mask canvas plus its paint settings
+   =========================================================== */
+const defaultPaint = () => ({ mode: "solid", c1: "#A8BCA5", n1: "Sage Green", c2: "#354B68", n2: "Navy Blue", split: 50, pattern: "", opacity: config.defaultOpacity, blend: true });
+
+function newWall() {
+  const mask = document.createElement("canvas"); mask.width = W; mask.height = H;
+  walls.push({ mask, ctx: mask.getContext("2d"), bb: null, paint: defaultPaint() });
+  activeWall = walls.length - 1; renderWallChips();
+  return walls[activeWall];
+}
+const ensureWall = () => walls[activeWall] || newWall();
+
+function growBB(wall, x, y, r = 0) {
+  const b = wall.bb || (wall.bb = { x1: x, y1: y, x2: x, y2: y });
+  b.x1 = Math.max(0, Math.min(b.x1, x - r)); b.y1 = Math.max(0, Math.min(b.y1, y - r));
+  b.x2 = Math.min(W, Math.max(b.x2, x + r)); b.y2 = Math.min(H, Math.max(b.y2, y + r));
+}
+
+function finishPoly() {
+  if (poly.length < 3) return toast("Click at least three wall corners first.");
+  const wall = ensureWall(), c = wall.ctx;
+  c.globalCompositeOperation = "source-over"; c.fillStyle = "#000";
+  c.beginPath(); poly.forEach((p, i) => i ? c.lineTo(p.x, p.y) : c.moveTo(p.x, p.y)); c.closePath(); c.fill();
+  poly.forEach(p => growBB(wall, p.x, p.y));
+  poly = []; log("Selected a wall with the polygon tool"); render();
+}
+
+function stroke(a, b) {
+  const wall = ensureWall(), c = wall.ctx;
+  c.globalCompositeOperation = tool === "eraser" ? "destination-out" : "source-over";
+  c.strokeStyle = c.fillStyle = "#000"; c.lineWidth = brushSize; c.lineCap = "round";
+  c.beginPath(); c.moveTo(a.x, a.y); c.lineTo(b.x, b.y); c.stroke();
+  c.beginPath(); c.arc(b.x, b.y, brushSize / 2, 0, Math.PI * 2); c.fill();
+  if (tool === "brush") { growBB(wall, a.x, a.y, brushSize / 2); growBB(wall, b.x, b.y, brushSize / 2); }
+  render();
+}
+
+function getPoint(e) {
+  const r = canvas.getBoundingClientRect();
+  return { x: (e.clientX - r.left) * W / r.width, y: (e.clientY - r.top) * H / r.height };
+}
+
+canvas.addEventListener("pointerdown", e => {
+  if (page !== "select" || !image) return;
+  const p = getPoint(e);
+  if (tool === "polygon") { poly.push(p); render(); return; }
+  drawing = true; lastPoint = p; canvas.setPointerCapture(e.pointerId); stroke(p, p);
+});
+canvas.addEventListener("pointermove", e => {
+  if (!drawing) return;
+  const p = getPoint(e); stroke(lastPoint, p); lastPoint = p;
+});
+["pointerup", "pointercancel"].forEach(ev => canvas.addEventListener(ev, () => { drawing = false; }));
+
+function renderWallChips() {
+  ["wallChipsSelect", "wallChipsPreview"].forEach(id => {
+    const box = $(id); box.replaceChildren();
+    if (!walls.length) { box.textContent = "No walls yet."; return; }
+    walls.forEach((w, i) => {
+      const b = document.createElement("button");
+      b.className = "gallery-tab" + (i === activeWall ? " active" : ""); b.textContent = "Wall " + (i + 1);
+      b.addEventListener("click", () => { activeWall = i; renderWallChips(); syncControls(); render(); });
+      box.appendChild(b);
+    });
+  });
+}
+
+function updateHint() {
+  $("selHint").textContent = {
+    polygon: "Click the corners of a wall, then press Finish polygon (or Enter).",
+    brush: "Drag over the wall to paint the selection.",
+    eraser: "Drag to remove parts of the selected wall."
+  }[tool];
+}
+
+/* ===========================================================
+   Drawing the scene
+   =========================================================== */
+function drawPattern(c, id, b) {
+  const p = patterns.find(x => x.id === id); if (!p) return;
+  const s = Math.max(6, Number(p.size) || 24); c.fillStyle = "rgba(255,255,255,.5)";
+  if (p.kind === "stripes-v") for (let x = b.x1; x < b.x2; x += s * 2) c.fillRect(x, b.y1, s, b.y2 - b.y1);
+  else if (p.kind === "stripes-h") for (let y = b.y1; y < b.y2; y += s * 2) c.fillRect(b.x1, y, b.x2 - b.x1, s);
+  else if (p.kind === "dots") for (let y = b.y1; y < b.y2; y += s) for (let x = b.x1; x < b.x2; x += s) { c.beginPath(); c.arc(x + s / 2, y + s / 2, s / 5, 0, Math.PI * 2); c.fill(); }
+  else if (p.kind === "checks") for (let y = b.y1, r = 0; y < b.y2; y += s, r++) for (let x = b.x1, k = 0; x < b.x2; x += s, k++) if ((r + k) % 2) c.fillRect(x, y, s, s);
+}
+
+function paintWall(c, wall) {
+  const p = wall.paint, b = wall.bb; if (!b) return;
+  lctx.globalCompositeOperation = "source-over"; lctx.clearRect(0, 0, W, H);
+  if (p.mode === "dual") {
+    const splitY = b.y1 + (b.y2 - b.y1) * p.split / 100;
+    lctx.fillStyle = p.c1; lctx.fillRect(0, 0, W, splitY);
+    lctx.fillStyle = p.c2; lctx.fillRect(0, splitY, W, H - splitY);
+  } else { lctx.fillStyle = p.c1; lctx.fillRect(0, 0, W, H); }
+  drawPattern(lctx, p.pattern, b);
+  lctx.globalCompositeOperation = "destination-in"; lctx.drawImage(wall.mask, 0, 0);   // keep only the wall area
+  c.save(); c.globalAlpha = p.opacity / 100; c.globalCompositeOperation = p.blend ? "multiply" : "source-over";
+  c.drawImage(layer, 0, 0); c.restore();
+}
+
+function drawSelection(c) {
+  walls.forEach((wall, i) => {
+    if (!wall.bb) return;
+    lctx.globalCompositeOperation = "source-over"; lctx.clearRect(0, 0, W, H);
+    lctx.fillStyle = i === activeWall ? "#3f51d9" : "#1fa37a"; lctx.fillRect(0, 0, W, H);
+    lctx.globalCompositeOperation = "destination-in"; lctx.drawImage(wall.mask, 0, 0);
+    c.save(); c.globalAlpha = .45; c.drawImage(layer, 0, 0); c.restore();
+  });
+  if (!poly.length) return;
+  c.save(); c.strokeStyle = "#fff"; c.lineWidth = 3; c.setLineDash([7, 5]); c.beginPath();
+  poly.forEach((p, i) => i ? c.lineTo(p.x, p.y) : c.moveTo(p.x, p.y)); c.stroke(); c.setLineDash([]);
+  poly.forEach(p => { c.beginPath(); c.arc(p.x, p.y, 6, 0, Math.PI * 2); c.fillStyle = "#fff"; c.fill(); c.strokeStyle = "#161c3a"; c.lineWidth = 2; c.stroke(); });
+  c.restore();
+}
+
+function drawScene(c, opts) {
+  c.fillStyle = "#e9ece6"; c.fillRect(0, 0, W, H);
+  if (!image) { c.fillStyle = "#6a7186"; c.font = "20px sans-serif"; c.textAlign = "center"; c.fillText("Upload a room photo to begin", W / 2, H / 2); return; }
+  const s = Math.min(W / image.naturalWidth, H / image.naturalHeight), w = image.naturalWidth * s, h = image.naturalHeight * s;
+  c.drawImage(image, (W - w) / 2, (H - h) / 2, w, h);
+  if (opts.paint) walls.forEach(wall => paintWall(c, wall));
+  if (opts.select) drawSelection(c);
+}
+const render = () => drawScene(ctx, { paint: page === "preview" && !showOriginal, select: page === "select" });
+
+function compose() {
+  const t = document.createElement("canvas"); t.width = W; t.height = H;
+  drawScene(t.getContext("2d"), { paint: true }); return t;
+}
+
+/* ===========================================================
+   Colour preview controls
+   =========================================================== */
+const paintOf = () => (walls[activeWall] || {}).paint;
+
+function syncControls() {
+  renderPatternSel(); renderCats();
+  const p = paintOf(); if (!p) return;
+  document.querySelectorAll("[data-mode]").forEach(b => b.classList.toggle("active", b.dataset.mode === p.mode));
+  if (p.mode !== "dual") target = "c1";
+  $("slot2").hidden = $("splitRow").hidden = p.mode !== "dual";
+  $("slot1").firstElementChild.style.background = p.c1; $("slot2").firstElementChild.style.background = p.c2;
+  $("slot1").classList.toggle("on", target === "c1"); $("slot2").classList.toggle("on", target === "c2");
+  $("split").value = p.split; $("splitVal").textContent = p.split + "%";
+  $("patternSel").value = p.pattern; $("opacity").value = p.opacity; $("opacityVal").textContent = p.opacity + "%";
+  $("blend").checked = p.blend; $("customColor").value = p[target]; $("hexColor").value = p[target];
+  renderPalette();
+}
+
+function setColor(hex, name) {
+  const p = paintOf(); if (!p) return toast("Select a wall first.");
+  p[target] = hex.toUpperCase(); p[target === "c1" ? "n1" : "n2"] = name || "Custom colour";
+  syncControls(); render();
+}
+
+function renderCats() {
+  const box = $("colorCats"); box.replaceChildren();
+  if (!categories().includes(catFilter)) catFilter = "All";
+  categories().forEach(cat => {
+    const b = document.createElement("button");
+    b.className = "gallery-tab" + (cat === catFilter ? " active" : ""); b.textContent = cat;
+    b.addEventListener("click", () => { catFilter = cat; renderCats(); renderPalette(); });
+    box.appendChild(b);
+  });
+}
+
+function renderPalette() {
+  const box = $("palette"); box.replaceChildren();
+  const p = paintOf(), list = colors.filter(c => catFilter === "All" || c.category === catFilter);
+  $("paletteHeading").textContent = `${catFilter === "All" ? "All colours" : catFilter} (${list.length})`;
+  list.forEach(c => {
+    const b = document.createElement("button"); b.type = "button";
+    b.className = "color-option" + (p && p[target].toLowerCase() === c.hex.toLowerCase() ? " selected" : "");
+    b.title = `${c.name} ${c.hex}`;
+    b.innerHTML = `<span class="swatch" style="background:${esc(c.hex)}"></span><span class="color-name">${esc(c.name)}</span><span class="color-hex">${esc(c.hex)}</span>`;
+    b.addEventListener("click", () => setColor(c.hex, c.name));
+    box.appendChild(b);
+  });
+}
+
+function renderPatternSel() {
+  const sel = $("patternSel"), keep = sel.value;
+  sel.innerHTML = '<option value="">Plain (no design)</option>' + patterns.map(p => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join("");
+  sel.value = keep;
+}
+
+function renderTrials() {
+  const box = $("trialChips"); box.replaceChildren();
+  if (!trials.length) { box.textContent = "No trials yet. Save a trial to compare different looks."; return; }
+  trials.forEach(t => {
+    const b = document.createElement("button"); b.className = "gallery-tab"; b.textContent = t.name;
+    b.addEventListener("click", () => {
+      t.paints.forEach((p, i) => { if (walls[i]) walls[i].paint = { ...p }; });
+      showOriginal = false; $("compareBtn").textContent = "Show original"; syncControls(); render();
+    });
+    box.appendChild(b);
+  });
+}
+
+/* ===========================================================
+   Saving, downloading and the saved designs page
+   =========================================================== */
+function saveDesign() {
+  const name = (prompt("Name this design:", imageName.replace(/\.\w+$/, "")) || "").trim();
+  if (!name) return;
+  let thumb;
+  try {
+    const s = document.createElement("canvas"); s.width = 720; s.height = 480;
+    s.getContext("2d").drawImage(compose(), 0, 0, 720, 480); thumb = s.toDataURL("image/jpeg", .8);
+  } catch (e) { return toast("Could not read this image. Try uploading the photo directly."); }
+  designs.unshift({
+    id: Date.now(), owner: user.email, ownerName: user.name, name, room: imageName, date: fmt(Date.now()), thumb,
+    walls: walls.filter(w => w.bb).map(w => ({ mode: w.paint.mode, c1: w.paint.c1, n1: w.paint.n1, c2: w.paint.c2, n2: w.paint.n2 }))
+  });
+  if (!store.set("ws-designs", designs)) { designs.shift(); return toast("Storage is full. Delete some saved designs first."); }
+  log("Saved design: " + name); toast("Design saved.");
+}
+
+function designCard(d, showOwner) {
+  const dots = d.walls.map(w => `<span class="dot" title="${esc(w.n1)}" style="background:${esc(w.c1)}"></span>` + (w.mode === "dual" ? `<span class="dot" title="${esc(w.n2)}" style="background:${esc(w.c2)}"></span>` : "")).join("");
+  return `<div class="design-card"><img src="${d.thumb}" alt="${esc(d.name)}"><strong>${esc(d.name)}</strong>
+    <p>${esc(d.date)}${showOwner ? " · " + esc(d.ownerName) + " (" + esc(d.owner) + ")" : ""}</p><div>${dots}</div>
+    <div class="actions"><a class="btn sm" href="${d.thumb}" download="${esc(d.name)}.jpg">Download</a><button class="btn sm" data-del="${d.id}">Delete</button></div></div>`;
+}
+
+function renderSaved() {
+  const mine = designs.filter(d => d.owner === user.email);
+  $("designList").innerHTML = mine.length ? mine.map(d => designCard(d, false)).join("") : '<p class="subtitle">No saved designs yet. Paint a room and click Save design.</p>';
+}
+
+function deleteDesign(id) {
+  const d = designs.find(x => x.id === id);
+  if (!d || (d.owner !== user.email && user.role !== "admin") || !confirm("Delete this saved design?")) return;
+  designs = designs.filter(x => x.id !== id); store.set("ws-designs", designs); log("Deleted design: " + d.name);
+  if (page === "admin") renderAdmin(); else renderSaved();
+}
+
+/* ===========================================================
+   Admin panel
+   =========================================================== */
+function colorsTab() {
+  const e = editing.color !== null ? colors[editing.color] : { name: "", hex: "#A8BCA5", category: "" };
+  const rows = colors.map((c, i) => `<tr><td><span class="dot" style="background:${esc(c.hex)}"></span></td><td>${esc(c.name)}</td><td>${esc(c.hex)}</td><td>${esc(c.category)}</td>
+    <td><button class="btn sm" data-act="editColor" data-i="${i}">Edit</button> <button class="btn sm" data-act="delColor" data-i="${i}">Delete</button></td></tr>`).join("");
+  return `<h2>Colour palette (${colors.length})</h2>
+    <div class="form-grid"><div><label for="ac-name">Shade name</label><input id="ac-name" value="${esc(e.name)}"></div>
+    <div><label for="ac-cat">Colour family</label><input id="ac-cat" list="catList" value="${esc(e.category)}"><datalist id="catList">${categories().slice(1).map(c => `<option value="${esc(c)}">`).join("")}</datalist></div>
+    <div><label for="ac-hex">Colour</label><input id="ac-hex" type="color" value="${esc(e.hex)}"></div></div>
+    <div class="actions"><button class="btn primary" data-act="saveColor">${editing.color !== null ? "Update colour" : "Add colour"}</button>${editing.color !== null ? '<button class="btn" data-act="cancelEdit">Cancel</button>' : ""}</div>
+    <div class="table-wrap"><table><thead><tr><th></th><th>Name</th><th>Hex</th><th>Family</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+
+function designsTab() {
+  const e = editing.pattern !== null ? patterns[editing.pattern] : { name: "", kind: "stripes-v", size: 24 };
+  const kinds = { "stripes-v": "Vertical stripes", "stripes-h": "Horizontal stripes", dots: "Dots", checks: "Checks" };
+  const rows = patterns.map((p, i) => `<tr><td>${esc(p.name)}</td><td>${esc(kinds[p.kind] || p.kind)}</td><td>${esc(p.size)}</td>
+    <td><button class="btn sm" data-act="editPattern" data-i="${i}">Edit</button> <button class="btn sm" data-act="delPattern" data-i="${i}">Delete</button></td></tr>`).join("");
+  return `<h2>Wall designs (${patterns.length})</h2>
+    <div class="form-grid"><div><label for="ap-name">Design name</label><input id="ap-name" value="${esc(e.name)}"></div>
+    <div><label for="ap-kind">Pattern type</label><select id="ap-kind">${Object.entries(kinds).map(([k, v]) => `<option value="${k}"${k === e.kind ? " selected" : ""}>${v}</option>`).join("")}</select></div>
+    <div><label for="ap-size">Pattern size (px)</label><input id="ap-size" type="number" min="6" max="200" value="${esc(e.size)}"></div></div>
+    <div class="actions"><button class="btn primary" data-act="savePattern">${editing.pattern !== null ? "Update design" : "Add design"}</button>${editing.pattern !== null ? '<button class="btn" data-act="cancelEdit">Cancel</button>' : ""}</div>
+    <div class="table-wrap"><table><thead><tr><th>Name</th><th>Type</th><th>Size</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+
+function usersTab() {
+  const rows = users.map(u => `<tr><td>${esc(u.name)}</td><td>${esc(u.email)}</td><td>${esc(u.role)}</td><td>${fmt(u.created)}</td><td>${fmt(u.lastLogin)}</td><td>${designs.filter(d => d.owner === u.email).length}</td>
+    <td>${u.role === "admin" ? "" : `<button class="btn sm" data-act="delUser" data-i="${u.id}">Remove</button>`}</td></tr>`).join("");
+  const acts = activity.slice(-40).reverse().map(a => `<tr><td>${fmt(a.t)}</td><td>${esc(a.user)}</td><td>${esc(a.action)}</td></tr>`).join("");
+  return `<h2>Users (${users.length})</h2><div class="table-wrap"><table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Joined</th><th>Last login</th><th>Designs</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+    <h2 style="margin-top:26px">Recent activity</h2><div class="table-wrap"><table><thead><tr><th>Time</th><th>User</th><th>Action</th></tr></thead><tbody>${acts}</tbody></table></div>`;
+}
+
+const savedTab = () => `<h2>All saved designs (${designs.length})</h2><div class="design-list" style="margin-top:14px">${designs.map(d => designCard(d, true)).join("") || '<p class="subtitle">Nothing saved yet.</p>'}</div>`;
+
+function settingsTab() {
+  return `<h2>System settings</h2><div class="form-grid">
+    <div><label for="st-name">App name</label><input id="st-name" value="${esc(config.appName)}"></div>
+    <div><label for="st-op">Default paint opacity (10-90%)</label><input id="st-op" type="number" min="10" max="90" value="${esc(config.defaultOpacity)}"></div>
+    <div><label for="st-mb">Max upload size (MB)</label><input id="st-mb" type="number" min="1" max="20" value="${esc(config.maxUploadMB)}"></div>
+    <div><label class="check" style="margin-top:40px"><input id="st-reg" type="checkbox"${config.allowRegistration ? " checked" : ""}> Allow new registrations</label></div></div>
+    <div class="actions"><button class="btn primary" data-act="saveSettings">Save settings</button><button class="btn" data-act="resetColors">Reset colours to default</button></div>`;
+}
+
+function renderAdmin() {
+  document.querySelectorAll("#adminTabs [data-tab]").forEach(b => b.classList.toggle("active", b.dataset.tab === adminTab));
+  const tabs = { colours: colorsTab, designs: designsTab, users: usersTab, saved: savedTab, settings: settingsTab };
+  $("adminBody").innerHTML = tabs[adminTab]();
+}
+
+function refreshColors() { store.set("ws-colors", colors); renderAdmin(); renderCats(); renderPalette(); }
+
+$("adminTabs").addEventListener("click", e => {
+  const b = e.target.closest("[data-tab]"); if (!b) return;
+  adminTab = b.dataset.tab; editing = { color: null, pattern: null }; renderAdmin();
+});
+
+$("adminBody").addEventListener("click", e => {
+  const b = e.target.closest("[data-act]"); if (!b || !user || user.role !== "admin") return;
+  const act = b.dataset.act, i = Number(b.dataset.i), val = id => $(id).value.trim();
+
+  if (act === "saveColor") {
+    const item = { name: val("ac-name"), hex: $("ac-hex").value.toUpperCase(), category: val("ac-cat") || "Other" };
+    if (!item.name) return toast("Enter a shade name.");
+    if (editing.color !== null) colors[editing.color] = item; else colors.push(item);
+    log((editing.color !== null ? "Updated colour " : "Added colour ") + item.name); editing.color = null; refreshColors();
+  } else if (act === "editColor") { editing.color = i; renderAdmin();
+  } else if (act === "delColor") { log("Removed colour " + colors[i].name); colors.splice(i, 1); editing.color = null; refreshColors();
+  } else if (act === "savePattern") {
+    const item = { id: editing.pattern !== null ? patterns[editing.pattern].id : "p" + Date.now(), name: val("ap-name"), kind: $("ap-kind").value, size: Math.max(6, Number(val("ap-size")) || 24) };
+    if (!item.name) return toast("Enter a design name.");
+    if (editing.pattern !== null) patterns[editing.pattern] = item; else patterns.push(item);
+    log("Saved design " + item.name); editing.pattern = null; store.set("ws-patterns", patterns); renderAdmin();
+  } else if (act === "editPattern") { editing.pattern = i; renderAdmin();
+  } else if (act === "delPattern") { log("Removed design " + patterns[i].name); patterns.splice(i, 1); editing.pattern = null; store.set("ws-patterns", patterns); renderAdmin();
+  } else if (act === "cancelEdit") { editing = { color: null, pattern: null }; renderAdmin();
+  } else if (act === "delUser") {
+    const u = users.find(x => x.id === i);
+    if (!u || !confirm("Remove this user and their saved designs?")) return;
+    users = users.filter(x => x.id !== i); designs = designs.filter(d => d.owner !== u.email);
+    store.set("ws-users", users); store.set("ws-designs", designs); log("Removed user " + u.email); renderAdmin();
+  } else if (act === "saveSettings") {
+    config = { appName: val("st-name") || "WallStudio", defaultOpacity: Math.min(90, Math.max(10, Number(val("st-op")) || 55)), maxUploadMB: Math.min(20, Math.max(1, Number(val("st-mb")) || 5)), allowRegistration: $("st-reg").checked };
+    store.set("ws-config", config); applyConfig(); log("Updated system settings"); toast("Settings saved.");
+  } else if (act === "resetColors") {
+    if (!confirm("Replace all colours with the default 50?")) return;
+    colors = DEFAULT_COLORS.map(c => ({ ...c })); log("Reset colour palette"); refreshColors();
+  }
+});
+
+function applyConfig() {
+  $("logo").textContent = config.appName; document.title = config.appName + " | Smart Paint Visualizer"; $("maxMB").textContent = config.maxUploadMB;
+}
+
+/* ===========================================================
+   Paint calculator
+   =========================================================== */
+function calculatePaint() {
+  const n = id => Number($(id).value), out = $("calculatorResult");
+  const width = n("wallWidth"), height = n("wallHeight"), coats = n("coats"), coverage = n("coverage"), price = n("paintPrice"), cut = n("deduction");
+  if (![width, height, coverage].every(v => Number.isFinite(v) && v > 0) || ![price, cut].every(v => Number.isFinite(v) && v >= 0)) { out.textContent = "Enter a wall width, height and coverage above zero, and a price and deduction of zero or more."; return; }
+  if (cut > width * height) { out.textContent = "Doors and windows cannot be larger than the wall."; return; }
+  const area = width * height - cut, litres = area * coats / coverage;
+  out.innerHTML = `<h3 style="margin:0 0 6px">Paint estimate</h3>Paintable area: ${area.toFixed(2)} m²<br>Paint needed: ${litres.toFixed(2)} litres<br>Buy: ${Math.ceil(litres)} litres<br>Estimated cost: ₹${(litres * price).toFixed(2)}`;
+}
+
+/* ===========================================================
+   Event wiring
+   =========================================================== */
+document.addEventListener("click", e => {
+  const go = e.target.closest("[data-go],[data-page]"); if (go) showPage(go.dataset.go || go.dataset.page);
+  const del = e.target.closest("[data-del]"); if (del) deleteDesign(Number(del.dataset.del));
+});
+document.addEventListener("keydown", e => {
+  if (e.key === "Enter" && page === "select" && !/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) finishPoly();
+});
+
+on("authSubmit", "click", submitAuth);
+on("authToggle", "click", () => setAuthMode(authMode === "login" ? "register" : "login"));
+on("authPass", "keydown", e => { if (e.key === "Enter") submitAuth(); });
+on("logoutBtn", "click", logout);
+
+on("photoUpload", "change", e => { handleFile(e.target.files[0]); e.target.value = ""; });
+["dragover", "dragenter"].forEach(ev => on("drop", ev, e => { e.preventDefault(); $("drop").classList.add("over"); }));
+["dragleave", "drop"].forEach(ev => on("drop", ev, e => { e.preventDefault(); $("drop").classList.remove("over"); if (ev === "drop") handleFile(e.dataTransfer.files[0]); }));
+
+document.querySelectorAll("[data-tool]").forEach(b => b.addEventListener("click", () => {
+  tool = b.dataset.tool; document.querySelectorAll("[data-tool]").forEach(x => x.classList.toggle("active", x === b)); updateHint();
+}));
+on("brushSize", "input", e => { brushSize = Number(e.target.value); $("brushVal").textContent = brushSize; });
+on("finishPoly", "click", finishPoly);
+on("undoPoint", "click", () => { poly.pop(); render(); });
+on("newWall", "click", () => { newWall(); poly = []; render(); toast("New wall added. Select its area now."); });
+on("clearWall", "click", () => { const w = walls[activeWall]; if (!w) return; w.ctx.clearRect(0, 0, W, H); w.bb = null; render(); });
+on("deleteWall", "click", () => {
+  if (!walls[activeWall]) return;
+  walls.splice(activeWall, 1); activeWall = Math.min(activeWall, walls.length - 1); trials = []; renderWallChips(); render();
+});
+
+document.querySelectorAll("[data-mode]").forEach(b => b.addEventListener("click", () => { const p = paintOf(); if (!p) return; p.mode = b.dataset.mode; syncControls(); render(); }));
+on("slot1", "click", () => { target = "c1"; syncControls(); });
+on("slot2", "click", () => { target = "c2"; syncControls(); });
+on("split", "input", e => { const p = paintOf(); if (!p) return; p.split = Number(e.target.value); $("splitVal").textContent = p.split + "%"; render(); });
+on("patternSel", "change", e => { const p = paintOf(); if (!p) return; p.pattern = e.target.value; render(); });
+on("opacity", "input", e => { const p = paintOf(); if (!p) return; p.opacity = Number(e.target.value); $("opacityVal").textContent = p.opacity + "%"; render(); });
+on("blend", "change", e => { const p = paintOf(); if (!p) return; p.blend = e.target.checked; render(); });
+on("customColor", "input", e => setColor(e.target.value, "Custom colour"));
+on("hexColor", "change", e => {
+  let v = e.target.value.trim(); if (!v.startsWith("#")) v = "#" + v;
+  if (/^#[0-9a-f]{6}$/i.test(v)) setColor(v, "Custom colour"); else { toast("Enter a valid HEX colour, like #A8BCA5."); const p = paintOf(); if (p) e.target.value = p[target]; }
+});
+
+on("compareBtn", "click", () => { showOriginal = !showOriginal; $("compareBtn").textContent = showOriginal ? "Show painted preview" : "Show original"; render(); });
+on("trialBtn", "click", () => { trials.push({ name: "Trial " + (trials.length + 1), paints: walls.map(w => ({ ...w.paint })) }); renderTrials(); toast("Trial saved. Click it any time to compare."); });
+on("saveBtn", "click", saveDesign);
+on("exportBtn", "click", () => {
+  try { const a = document.createElement("a"); a.download = "WallStudio-Design.png"; a.href = compose().toDataURL("image/png"); a.click(); log("Downloaded a design"); }
+  catch (e) { toast("Could not export. If this is an online photo, upload the photo directly."); }
+});
+on("calculateButton", "click", calculatePaint);
+
+/* ===========================================================
+   Start up
+   =========================================================== */
+async function init() {
+  if (!users.some(u => u.role === "admin")) {
+    users.push({ id: 1, name: "Administrator", email: "admin@wallstudio.com", role: "admin", hash: await hash("admin123", "admin@wallstudio.com"), created: Date.now(), lastLogin: Date.now() });
+    store.set("ws-users", users);
+  }
+  applyConfig(); renderGallery(); renderCats(); renderPatternSel(); calculatePaint(); setAuthMode("login");
+  const email = store.get("ws-session", null), saved = users.find(u => u.email === email);
+  if (saved) { user = saved; enterApp(); } else showPage("login");
+}
+init();
+</script>
+</body>
+</html>
