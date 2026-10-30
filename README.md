@@ -70,11 +70,11 @@ The primary deliverable is a functional front-end prototype demonstrating how us
 
 ## 🌐 Live Demo
 
-https://fatemabohari13.github.io/Unifiedmentor_Wallstudio01/
+https://fatemabohari13.github.io/Unifiedmentor_smartwallpaintvisualizer01/
 
 ## 📂 Repository Link
 
-https://github.com/FatemaBohari13/Unifiedmentor_Wallstudio01/blob/main/README.md
+https://github.com/FatemaBohari13/Unifiedmentor_smartwallpaintvisualizer01/edit/main/README.md
 
 ## 🚀 Conclusion
 
